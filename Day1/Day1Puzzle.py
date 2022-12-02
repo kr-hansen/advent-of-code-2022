@@ -26,6 +26,6 @@ def find_top_n_calories(carry_weights, n=3):
     sorted_sums = sorted(sums, reverse=True)
     return sum(sorted_sums[:n])
 
-full_input = read_csv("inputD1Puzzle1.csv")
+full_input = read_csv("inputD1Puzzle.csv")
 weight, elf = find_elf_with_most_calories(full_input)
 top3weight = find_top_n_calories(full_input, n=3)

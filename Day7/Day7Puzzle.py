@@ -33,25 +33,6 @@ def parse_cmd_output(file_list, start_dir='/'):
             file_output[cwd]['size'] += int(fsize)
     return file_output
 
-def calc_nested_sizes(sizes, save_dict=None, save_key='/', sum_val=0, iter=0):
-    if save_dict == None:
-        save_dict = {}
-    for sel_key in sizes.keys():
-        if isinstance(sizes[sel_key], dict):
-            if sel_key in save_dict.keys():
-                new_key = f'{sel_key}_{iter}'
-                iter += 1
-            else:
-                new_key = sel_key
-            save_dict = calc_nested_sizes(sizes[sel_key], save_dict, save_key=new_key, iter=iter)
-        elif isinstance(sizes[sel_key], int):
-            sum_val += sizes[sel_key]
-            save_dict[save_key] = sum_val
-        else:
-            dtype = type(sizes[sel_key])
-            print(f'Other type: {dtype}')
-    return save_dict
-
 def calc_flat_sizes(sizes, max_size=100000):
     total_size = 0
     for path in sizes.keys():
@@ -61,20 +42,28 @@ def calc_flat_sizes(sizes, max_size=100000):
                 path_size += sizes[subpath]['size']
         if path_size <= max_size:
             total_size += path_size
-    return total_size
-
+        sizes[path]['total_size'] = path_size
+    return total_size, sizes
 
 def calc_largest_file(file_list, max_size=100000):
-    cmd_struct = parse_cmd_output(file_list)
-    flat_sizes = calc_nested_sizes(cmd_struct)
-    total_size = 0
-    for sel_dir in flat_sizes.keys():
-        if flat_sizes[sel_dir] <= max_size:
-            total_size += flat_sizes[sel_dir]
-    return cmd_struct, flat_sizes, total_size
+    flat_parsed = parse_cmd_output(file_list)
+    total_size, adjusted_sizes = calc_flat_sizes(flat_parsed)
+    return flat_parsed, total_size
+
+def select_dir_to_delete(sizes, total_size=70000000, free_space=30000000):
+    sum_of_all, all_sizes = calc_flat_sizes(sizes, max_size=100000000)
+    current_space = all_sizes['/']['total_size']
+    total_sizes = [all_sizes[dir]['total_size'] for dir in all_sizes.keys()]
+    sorted_sizes = sorted(total_sizes)
+    space_to_empty = current_space - (total_size - free_space)
+    big_enough_sizes = [sz for sz in sorted_sizes if sz > space_to_empty]
+    final_size = min(big_enough_sizes)
+    return final_size
 
 test = read_file("testD7Puzzle.txt")
-test_parse, test_flat, test_total = calc_largest_file(test)
+test_parse, test_size = calc_largest_file(test)
+del_size = select_dir_to_delete(test_parse)
 
 full = read_file("inputDay7Puzzle.txt")
-full_parse, full_flat, full_total = calc_largest_file(full)
+full_parse, full_size = calc_largest_file(full)
+full_del = select_dir_to_delete(full_parse)
